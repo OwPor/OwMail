@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OwMail - Temporary Email Service</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configure Tailwind dark mode
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            100: '#1E1E1E',
+                            200: '#2D2D2D',
+                            300: '#3D3D3D',
+                            400: '#4D4D4D',
+                            500: '#5D5D5D',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-4xl">
+        <!-- Header -->
+        <header class="relative text-center mb-6">
+            <h1 class="text-3xl font-bold text-indigo-400 md:text-4xl">OwMail</h1>
+            <p class="text-gray-400">Temporary email service powered by <a href="https://mail.tm" class="text-indigo-400 hover:text-indigo-300" target="_blank" rel="noopener">Mail.tm</a> API</p>
+            <button id="theme-toggle" class="absolute top-0 right-0 p-2 rounded-full hover:bg-gray-700 transition-colors" aria-label="Toggle theme">
+                <!-- Sun icon for dark mode (shown by default) -->
+                <svg xmlns="http://www.w3.org/2000/svg" id="light-icon" class="h-5 w-5 text-yellow-300" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                </svg>
+                <!-- Moon icon for light mode (hidden by default) -->
+                <svg xmlns="http://www.w3.org/2000/svg" id="dark-icon" class="h-5 w-5 text-gray-300 hidden" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+            </button>
+        </header>
+
+        <!-- Account Switcher (visible when accounts exist) -->
+        <div id="account-switcher" class="hidden mb-6">
+            <div class="bg-gray-800 rounded-lg shadow-md p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-indigo-300">Your Accounts</h2>
+                    <button id="create-new-account" class="text-xs px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        + New Email
+                    </button>
+                </div>
+                <div class="overflow-x-auto pb-1">
+                    <ul id="accounts-list" class="flex space-x-2 items-center"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Authentication Section (Shown when not logged in) -->
+        <div id="auth-section" class="mx-auto bg-gray-800 rounded-lg shadow-md p-5 mb-6">
+            <!-- Auth Header -->
+            <div class="flex justify-between items-center mb-4">
+                <button id="back-to-accounts" class="p-2 text-gray-400 hover:text-gray-300" title="Back to accounts">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </button>
+                <h2 class="text-xl font-semibold text-indigo-300">Account Access</h2>
+                <div class="w-5"></div> <!-- Spacer for centering -->
+            </div>
+            
+            <!-- Auth Tabs -->
+            <div class="flex border-b border-gray-700 mb-5">
+                <button id="create-tab" class="flex-1 py-2 px-4 text-center text-indigo-300 border-b-2 border-indigo-500 font-medium">Create Account</button>
+                <button id="login-tab" class="flex-1 py-2 px-4 text-center text-gray-400 hover:text-gray-300 font-medium">Login</button>
+            </div>
+            
+            <!-- Create Account Form -->
+            <div id="create-form">
+                <div class="mb-4">
+                    <label for="domain-select" class="block text-sm font-medium text-gray-300 mb-1">Select Domain</label>
+                    <select id="domain-select" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="" disabled selected>Loading domains...</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="username-input" class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                    <input type="text" id="username-input" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter username">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="password-input" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="password-input" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter or generate password">
+                        <button id="toggle-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-sm text-gray-300 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row sm:justify-between gap-3 mb-4">
+                    <button id="generate-password" class="px-4 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 order-2 sm:order-1">
+                        Generate Password
+                    </button>
+                    <button id="create-account" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 order-1 sm:order-2">
+                        Create Account
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="hidden">
+                <div class="mb-4">
+                    <label for="login-email" class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                    <input type="email" id="login-email" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="your-email@domain.com">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="login-password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter your password">
+                        <button id="toggle-login-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-sm text-gray-300 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <button id="login-button" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        Login
+                    </button>
+                </div>
+            </div>
+            
+            <div id="auth-error" class="hidden text-red-400 text-sm mt-2"></div>
+            
+            <!-- Loading indicator -->
+            <div id="auth-loading" class="hidden text-center mt-4">
+                <div class="inline-block loading-pulse">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                    </svg>
+                </div>
+                <p class="mt-2 text-gray-400">Processing your request...</p>
+            </div>
+        </div>
+
+        <!-- Email Interface (Shown when logged in) -->
+        <div id="email-interface" class="hidden">
+            <!-- Email Address Display -->
+            <div class="mx-auto bg-gray-800 rounded-lg shadow-md p-5 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-indigo-300">Current Email</h2>
+                    <button id="logout-btn" class="text-sm text-red-400 hover:text-red-300">
+                        Switch Account
+                    </button>
+                </div>
+                
+                <div class="flex items-center bg-gray-700 p-3 rounded-md">
+                    <span id="current-email" class="flex-grow font-medium text-gray-200 mr-2 break-all"></span>
+                    <button id="copy-email" class="text-indigo-400 hover:text-indigo-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="flex items-center justify-between mt-4">
+                    <button id="show-password-btn" class="text-sm text-gray-400 hover:text-gray-300">
+                        Show Password
+                    </button>
+                    <button id="copy-password" class="text-sm text-indigo-400 hover:text-indigo-300 hidden">
+                        Copy Password
+                    </button>
+                </div>
+                
+                <div id="password-display" class="hidden mt-2 bg-gray-700 p-2 rounded-md break-all text-sm text-gray-200"></div>
+            </div>
+
+            <!-- Inbox Controls -->
+            <div class="mx-auto bg-gray-800 rounded-lg shadow-md p-4 mb-6 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-indigo-300">Inbox</h2>
+                <button id="refresh-inbox" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    Refresh
+                </button>
+            </div>
+
+            <!-- Inbox Messages -->
+            <div id="inbox-container" class="mx-auto bg-gray-800 rounded-lg shadow-md overflow-hidden">
+                <div id="loading-messages" class="p-6 text-center text-gray-400">
+                    <div class="loading-pulse inline-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <p class="mt-2">Loading messages...</p>
+                </div>
+                <div id="no-messages" class="hidden p-6 text-center text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <p>No messages yet. Refresh your inbox to check for new emails.</p>
+                </div>
+                <ul id="message-list" class="divide-y divide-gray-700"></ul>
+            </div>
+        </div>
+
+        <!-- Email Viewer Modal -->
+        <div id="email-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50 p-4">
+            <div class="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-hidden flex flex-col">
+                <!-- Modal Header -->
+                <div class="bg-gray-700 px-4 py-3 border-b border-gray-600 flex justify-between items-start">
+                    <div>
+                        <h3 id="modal-subject" class="text-lg font-semibold text-white break-words pr-6">Email Subject</h3>
+                        <div class="mt-1 text-sm text-gray-300">
+                            <p id="modal-from">From: <span class="font-medium">sender@example.com</span></p>
+                            <p id="modal-date" class="text-xs text-gray-400 mt-1">Date: Jan 1, 2023, 12:00 PM</p>
+                        </div>
+                    </div>
+                    <button id="close-modal" class="text-gray-400 hover:text-gray-200">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Modal Body -->
+                <div class="overflow-y-auto flex-grow p-4 md:p-6 email-content-dark">
+                    <div id="email-content" class="prose prose-invert max-w-none"></div>
+                </div>
+                
+                <!-- Modal Footer -->
+                <div class="bg-gray-700 px-4 py-3 border-t border-gray-600 flex justify-between gap-2">
+                    <button id="delete-email" class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        Delete
+                    </button>
+                    <!-- <button id="reply-email" class="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        Reply
+                    </button> -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md shadow-lg transform transition-transform duration-300 translate-y-20 opacity-0"></div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

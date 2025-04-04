@@ -1,0 +1,99 @@
+/* Custom styles for TempMail application - Theme Support & Mobile First */
+
+/* Theme transition */
+body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light mode specific overrides */
+body.light-mode {
+    color-scheme: light;
+}
+
+body.light-mode .email-content-dark {
+    color-scheme: light;
+}
+
+
+/* Animation for toast notifications */
+.toast-show {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+}
+
+/* Email content styling for proper rendering in dark mode */
+.email-content-dark {
+    color-scheme: dark;
+}
+
+#email-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+#email-content a {
+    color: #818cf8; /* indigo-400 */
+    text-decoration: underline;
+}
+
+/* Custom hover effect for inbox messages */
+.message-item {
+    transition: background-color 0.2s ease;
+}
+
+.message-item:hover {
+    background-color: rgba(67, 56, 202, 0.1);
+}
+
+/* Account chip styling */
+.account-chip {
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.account-chip.active {
+    border-color: #818cf8; /* indigo-400 */
+    background-color: rgba(67, 56, 202, 0.2);
+}
+
+@media (max-width: 640px) {
+    .account-chip {
+        max-width: 150px;
+    }
+}
+
+/* Loading animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.loading-pulse {
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #374151; /* gray-700 */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4B5563; /* gray-600 */
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6B7280; /* gray-500 */
+}

@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailContent = document.getElementById('email-content');
     const closeModalBtn = document.getElementById('close-modal');
     const deleteEmailBtn = document.getElementById('delete-email');
-    const replyEmailBtn = document.getElementById('reply-email');
+    // const replyEmailBtn = document.getElementById('reply-email');
 
     // Toast notification
     const toast = document.getElementById('toast');
@@ -89,6 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize the application and check for existing session
     function initializeApp() {
+        // Set up all event listeners first to ensure they're available
+        // regardless of the initialization path
+        setupEventListeners();
+        
         // Initialize theme
         initializeTheme();
         
@@ -131,9 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // No accounts at all, fetch available domains for new account
             fetchDomains();
         }
-
-        // Set up event listeners
-        setupEventListeners();
     }
 
     // Load saved accounts from localStorage
@@ -193,8 +194,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Add each account
         savedAccounts.forEach(account => {
-            const accountItem = document.createElement('li');
-            accountItem.className = `account-chip px-3 py-2 bg-gray-700 text-gray-200 rounded-md cursor-pointer hover:bg-gray-600 border border-gray-600 text-sm${account.email === currentAccount ? ' active' : ''}`;
+            const accountRow = document.createElement('div');
+            accountRow.className = 'flex items-center justify-between mb-2';
+            
+            // Create the account item (clickable)
+            const accountItem = document.createElement('div');
+            accountItem.className = `account-chip flex-1 px-3 py-2 bg-gray-700 text-gray-200 rounded-l-md cursor-pointer hover:bg-gray-600 border border-gray-600 text-sm${account.email === currentAccount ? ' active' : ''}`;
             accountItem.textContent = account.email;
             accountItem.dataset.email = account.email;
             
@@ -202,7 +207,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 switchToAccount(account.email);
             });
             
-            accountsList.appendChild(accountItem);
+            // Create the delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-account px-2 py-2 bg-red-600 text-white rounded-r-md hover:bg-red-700 border border-gray-600 text-sm';
+            deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
+            deleteButton.title = 'Delete account';
+            
+            deleteButton.addEventListener('click', (e) => {
+                e.stopPropagation();  // Prevent triggering the account click
+                deleteAccount(account.email);
+            });
+            
+            // Add elements to the row
+            accountRow.appendChild(accountItem);
+            accountRow.appendChild(deleteButton);
+            
+            // Add row to the accounts list
+            accountsList.appendChild(accountRow);
         });
         
         // Show the account switcher
@@ -262,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Email modal
         closeModalBtn.addEventListener('click', closeEmailModal);
         deleteEmailBtn.addEventListener('click', deleteCurrentEmail);
-        replyEmailBtn.addEventListener('click', replyToCurrentEmail);
+        // replyEmailBtn.addEventListener('click', replyToCurrentEmail);
 
         // Close modal when clicking outside
         emailModal.addEventListener('click', (e) => {
@@ -295,6 +316,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.classList.remove('active');
             }
         });
+        
+        // Clear message list before showing the new account's messages
+        messageList.innerHTML = '';
         
         // Check token validity and show email interface
         checkTokenAndShowEmailInterface();
@@ -553,12 +577,25 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPassword = randomPassword;
             localStorage.setItem('owmail_active_account', email);
             
+            // Ensure password display is ready
+            passwordDisplay.textContent = randomPassword;
+            
             // Mark that this is no longer the first visit
             localStorage.setItem(FIRST_VISIT_KEY, 'false');
             isFirstVisit = false;
             
+            // Make sure all event listeners are attached
+            setupEventListeners();
+            
             // Show email interface
             showEmailInterface();
+            
+            // Set password display content immediately for auto-created accounts
+            // This ensures the show password button works immediately
+            passwordDisplay.textContent = randomPassword;
+            
+            // Make sure the inbox is empty before fetching messages
+            messageList.innerHTML = '';
             fetchMessages();
             
             showToast(`Welcome! Your temporary email ${email} is ready. We've automatically created this for you.`, 'success', 6000);
@@ -810,17 +847,41 @@ document.addEventListener('DOMContentLoaded', () => {
         emailInterface.classList.remove('hidden');
         currentEmail.textContent = currentAccount;
         
+        // Reset password display state
+        passwordDisplay.classList.add('hidden');
+        copyPasswordBtn.classList.add('hidden');
+        showPasswordBtn.textContent = 'Show Password';
+        
         // Start automatic inbox polling
         startInboxPolling();
     }
 
     // Toggle saved password visibility
     function toggleSavedPasswordVisibility() {
-        if (passwordDisplay.classList.contains('hidden')) {
+        // Ensure we have the current password for this account
+        if (!currentPassword && currentAccount) {
+            // Try to find current password in saved accounts
+            const account = savedAccounts.find(acc => acc.email === currentAccount);
+            if (account && account.password) {
+                currentPassword = account.password;
+            }
+        }
+        
+        // Always set the text content before toggling visibility
+        // This ensures it's ready when needed for first-time visibility
+        if (currentPassword) {
             passwordDisplay.textContent = currentPassword;
-            passwordDisplay.classList.remove('hidden');
-            copyPasswordBtn.classList.remove('hidden');
-            showPasswordBtn.textContent = 'Hide Password';
+        }
+        
+        // Now toggle visibility
+        if (passwordDisplay.classList.contains('hidden')) {
+            if (currentPassword) {
+                passwordDisplay.classList.remove('hidden');
+                copyPasswordBtn.classList.remove('hidden');
+                showPasswordBtn.textContent = 'Hide Password';
+            } else {
+                showToast('Password not available', 'error');
+            }
         } else {
             passwordDisplay.classList.add('hidden');
             copyPasswordBtn.classList.add('hidden');
@@ -895,6 +956,102 @@ document.addEventListener('DOMContentLoaded', () => {
         
         showToast('Account removed successfully');
     }
+    
+    // Delete a specific account by email
+    function deleteAccount(email) {
+        if (!email) {
+            showToast('No account specified', 'error');
+            return;
+        }
+        
+        // Set up delete confirmation modal
+        const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+        const deleteConfirmMessage = document.getElementById('delete-confirm-message');
+        const deleteCancelBtn = document.getElementById('delete-cancel-btn');
+        const deleteConfirmBtn = document.getElementById('delete-confirm-btn');
+        
+        // Update confirmation message
+        deleteConfirmMessage.textContent = `Are you sure you want to delete the account ${email}? This action cannot be undone.`;
+        
+        // Show the modal
+        deleteConfirmModal.classList.remove('hidden');
+        
+        // Set up event handlers for cancel and confirm buttons
+        const cancelHandler = () => {
+            deleteConfirmModal.classList.add('hidden');
+            deleteCancelBtn.removeEventListener('click', cancelHandler);
+            deleteConfirmBtn.removeEventListener('click', confirmHandler);
+        };
+        
+        const confirmHandler = () => {
+            deleteConfirmModal.classList.add('hidden');
+            deleteCancelBtn.removeEventListener('click', cancelHandler);
+            deleteConfirmBtn.removeEventListener('click', confirmHandler);
+            
+            // Proceed with account deletion
+            performAccountDeletion(email);
+        };
+        
+        deleteCancelBtn.addEventListener('click', cancelHandler);
+        deleteConfirmBtn.addEventListener('click', confirmHandler);
+    }
+    
+    // Perform the actual deletion of an account
+    function performAccountDeletion(email) {
+        // Find the account index
+        const accountIndex = savedAccounts.findIndex(acc => acc.email === email);
+        
+        if (accountIndex === -1) {
+            showToast('Account not found in saved accounts', 'error');
+            return;
+        }
+        
+        // Check if it's the current account
+        const isCurrentAccount = (email === currentAccount);
+        
+        // Remove the account from saved accounts
+        savedAccounts.splice(accountIndex, 1);
+        
+        // Save updated accounts list
+        saveAccounts();
+        
+        // If it was the current account, reset current info
+        if (isCurrentAccount) {
+            // Reset active account
+            localStorage.removeItem('owmail_active_account');
+            
+            // Stop inbox polling
+            stopInboxPolling();
+            
+            // Reset state
+            currentAccount = null;
+            currentToken = null;
+            currentPassword = null;
+        }
+        
+        // Refresh the account switcher
+        showAccountSwitcher();
+        
+        // If we have no accounts left, show the auth section
+        if (savedAccounts.length === 0) {
+            authSection.classList.remove('hidden');
+            accountSwitcher.classList.add('hidden');
+            emailInterface.classList.add('hidden');
+            fetchDomains();
+        } else if (isCurrentAccount && savedAccounts.length > 0) {
+            // If it was the current account and we have others, switch to the first one
+            switchToAccount(savedAccounts[0].email);
+        }
+        
+        showToast(`Account ${email} deleted`, 'success');
+    }
+    
+    // Close modal when clicking outside (ESC key is handled by the browser)
+    document.getElementById('delete-confirm-modal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('delete-confirm-modal')) {
+            document.getElementById('delete-confirm-modal').classList.add('hidden');
+        }
+    });
 
     // Start automatic inbox polling
     function startInboxPolling() {
@@ -1240,27 +1397,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Reply to current email using mailto link
-    function replyToCurrentEmail() {
-        if (!currentMessageId) {
-            showToast('Cannot reply to email', 'error');
-            return;
-        }
+    // function replyToCurrentEmail() {
+    //     if (!currentMessageId) {
+    //         showToast('Cannot reply to email', 'error');
+    //         return;
+    //     }
         
-        const listItem = messageList.querySelector(`[data-id="${currentMessageId}"]`);
-        if (!listItem) return;
+    //     const listItem = messageList.querySelector(`[data-id="${currentMessageId}"]`);
+    //     if (!listItem) return;
         
-        const subject = modalSubject.textContent;
-        const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
-        const fromMatch = modalFrom.textContent.match(/From: (.+)/);
-        const fromAddress = fromMatch ? fromMatch[1].trim().replace(/.*<(.+)>.*/, '$1') : '';
+    //     const subject = modalSubject.textContent;
+    //     const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
+    //     const fromMatch = modalFrom.textContent.match(/From: (.+)/);
+    //     const fromAddress = fromMatch ? fromMatch[1].trim().replace(/.*<(.+)>.*/, '$1') : '';
         
-        if (fromAddress) {
-            const mailtoLink = `mailto:${fromAddress}?subject=${encodeURIComponent(replySubject)}`;
-            window.open(mailtoLink);
-        } else {
-            showToast('Could not find recipient address', 'error');
-        }
-    }
+    //     if (fromAddress) {
+    //         const mailtoLink = `mailto:${fromAddress}?subject=${encodeURIComponent(replySubject)}`;
+    //         window.open(mailtoLink);
+    //     } else {
+    //         showToast('Could not find recipient address', 'error');
+    //     }
+    // }
 
     // Copy text to clipboard
     function copyToClipboard(text) {
